@@ -130,3 +130,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Telegram
 
 TG_TOKEN = os.environ.get('TG_TOKEN')
+COURIER_ID = os.environ.get('COURIER_ID')
+FLORIST_ID = os.environ.get('FLORIST_ID')

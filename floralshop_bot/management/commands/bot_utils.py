@@ -19,3 +19,20 @@ def choose_price_keyboard():
     ],
         resize_keyboard=True
     )
+
+
+def order_keyboard():
+    return ReplyKeyboardMarkup([
+        ['Заказать', 'Показать еще'],
+        ['Консультация', 'На главную']
+    ],
+        resize_keyboard=True
+    )
+
+def return_to_main_keyboard():
+    return ReplyKeyboardMarkup([
+        ['На главную']
+    ],
+        resize_keyboard=True
+    )
+
