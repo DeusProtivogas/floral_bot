@@ -42,7 +42,7 @@ class Command(BaseCommand):
                 "show_example": [MessageHandler(Filters.text, show_example_bouqet)],
                 "order_choice": [
                     MessageHandler(Filters.regex('Заказать'), order_courier_name),
-                    # MessageHandler(Filters.regex('Показать еще'), booking_method_2),
+                    MessageHandler(Filters.regex('Показать еще'), show_example_bouqet),
                     MessageHandler(Filters.regex('Консультация'), ask_consultation),
                     MessageHandler(Filters.regex('На главную'), ask_occasion),
                 ],
