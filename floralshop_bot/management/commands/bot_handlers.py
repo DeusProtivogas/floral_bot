@@ -6,7 +6,8 @@ import phonenumbers
 
 from floralshop import settings
 from .bot_utils import personal_data_keyboard, choose_occasion_keyboard, choose_price_keyboard, order_keyboard, \
-    return_to_main_keyboard
+    return_to_main_keyboard, is_possible_name, is_proper_date_format, is_proper_time_format
+from ...db_utils import save_order, get_bouquets_list
 
 
 def welcome_pdf_user(update, context):
@@ -40,64 +41,67 @@ def ask_price(update, context):
     update.message.reply_text(message, reply_markup=choose_price_keyboard())
     return "show_example"
 
-TEST_BOUQETS = [
-    {
-        "description": "Text text text text\nText Text",
-        "name": "bouqet_1",
-        "composition": [
-            "Flower 1",
-            "Flower 2",
-        ],
-        "price": 500,
-        "occasion": "Свадьба",
-    },
-
-    {
-        "description": "Text text text",
-        "name": "bouqet_2",
-        "composition": [
-            "Flower 1",
-            "Flower 2",
-            "Flower 3",
-        ],
-        "price": 1500,
-        "occasion": "День рождения",
-    },
-
-    {
-        "description": "Text text\nText Text",
-        "name": "bouqet_3",
-        "composition": [
-            "Flower 1",
-            "Flower 5",
-            "Flower 3",
-        ],
-        "price": 2500,
-        "occasion": "День рождения",
-    },
-{
-        "description": "Text text text text\nText Text",
-        "name": "bouqet_4",
-        "composition": [
-            "Flower 1",
-            "Flower 2",
-        ],
-        "price": 1500,
-        "occasion": "Свадьба",
-    },
-{
-        "description": "Text text text text\nText Text",
-        "name": "bouqet_DEF",
-        "composition": [
-            "Flower 1",
-            "Flower 2",
-        ],
-        "price": 1500,
-        "occasion": "Свадьба",
-    },
-]
+# TEST_BOUQETS = [
+#     {
+#         "description": "Text text text text\nText Text",
+#         "name": "bouqet_1",
+#         "composition": [
+#             "Flower 1",
+#             "Flower 2",
+#         ],
+#         "price": 500,
+#         "occasion": "Свадьба",
+#     },
+#
+#     {
+#         "description": "Text text text",
+#         "name": "bouqet_2",
+#         "composition": [
+#             "Flower 1",
+#             "Flower 2",
+#             "Flower 3",
+#         ],
+#         "price": 1500,
+#         "occasion": "День рождения",
+#     },
+#
+#     {
+#         "description": "Text text\nText Text",
+#         "name": "bouqet_3",
+#         "composition": [
+#             "Flower 1",
+#             "Flower 5",
+#             "Flower 3",
+#         ],
+#         "price": 2500,
+#         "occasion": "День рождения",
+#     },
+# {
+#         "description": "Text text text text\nText Text",
+#         "name": "bouqet_4",
+#         "composition": [
+#             "Flower 1",
+#             "Flower 2",
+#         ],
+#         "price": 1500,
+#         "occasion": "Свадьба",
+#     },
+# {
+#         "description": "Text text text text\nText Text",
+#         "name": "bouqet_DEF",
+#         "composition": [
+#             "Flower 1",
+#             "Flower 2",
+#         ],
+#         "price": 1500,
+#         "occasion": "Свадьба",
+#     },
+# ]
 
 def show_example_bouqet(update, context):
+    BOUQETS = get_bouquets_list()
+    print(BOUQETS)
+
     if context.user_data["is_first_bouquet"]:
         context.user_data["is_first_bouquet"] = False
         price = update.message.text
@@ -107,22 +111,34 @@ def show_example_bouqet(update, context):
         # Getting bouqet from a list
         ###
         context.user_data["bouqet"] = None
-        for item in sorted(TEST_BOUQETS, key=lambda k: (k['occasion'].lower(), -k['price'])):
+        for item in sorted(BOUQETS, key=lambda k: (k.occasion.lower(), -k.price)):
             print(item)
-            if context.user_data["occasion"] == item['occasion'] and context.user_data["price"] < item['price']:
+            if context.user_data["occasion"] == item.occasion and context.user_data["price"] == item.price:
                 context.user_data["bouqet"] = item
                 break
         if not context.user_data["bouqet"]:
-            context.user_data["bouqet"] = TEST_BOUQETS[-1]
+            context.user_data["bouqet"] = BOUQETS[-1]
 
         # Print example
         print(context.user_data["bouqet"])
-        message = json.dumps(context.user_data["bouqet"])
+        # message = json.dumps(context.user_data["bouqet"])
+        # message = f"{}"
 
     else:
-        b_id = TEST_BOUQETS.index(context.user_data["bouqet"])
-        context.user_data["bouqet"] = TEST_BOUQETS[(b_id + 1) % len(TEST_BOUQETS)]
-        message = json.dumps(context.user_data["bouqet"])
+        b_id = BOUQETS.index(context.user_data["bouqet"])
+        context.user_data["bouqet"] = BOUQETS[(b_id + 1) % len(BOUQETS)]
+
+
+    print(context.user_data["bouqet"])
+    chat_id = update.effective_chat.id
+    with open(f'static/{context.user_data["bouqet"].name}.jpg', 'rb') as photo_file:
+        context.bot.send_photo(chat_id=chat_id, photo=photo_file)
+    message = f"Вариант букета:\n" \
+                         f"Название: {context.user_data['bouqet'].ru_name}\n" \
+                         f"Описание: {context.user_data['bouqet'].description}\n" \
+                         f"Состав цветов: {context.user_data['bouqet'].composition}\n" \
+                         f"Цена: {context.user_data['bouqet'].price}\n"
+
 
     print("OCCASION: ", context.user_data["occasion"])
     print("PRICE: ", context.user_data["price"])
@@ -133,7 +149,10 @@ def show_example_bouqet(update, context):
 
 
 def order_courier_name(update, context):
-    message = "Для заказа, пожалуйста введите имя:"
+    # bouqet_name = update.message.text
+    # context.user_data["bouqet_name"] = bouqet_name
+
+    message = "Для заказа, пожалуйста введите имя и фамилию:"
     update.message.reply_text(
         message,
         reply_markup = ReplyKeyboardRemove()
@@ -145,19 +164,41 @@ def order_courier_address(update, context):
     name = update.message.text
     context.user_data["name"] = name
 
-    message = "Пожалуйста, введите адрес:"
-    update.message.reply_text(
-        message,
-        reply_markup = ReplyKeyboardRemove()
-    )
-    return "order_courier_date"
+    if is_possible_name(name):
+
+        message = "Пожалуйста, введите адрес:"
+        update.message.reply_text(
+            message,
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return "order_courier_date"
+
+    else:
+        message = "Извините, имя и фамилия неправильные. Нужны два слова, без цифр:"
+
+        update.message.reply_text(
+            message,
+            reply_markup = ReplyKeyboardRemove(),
+        )
+
+        # return -1
+        return "order_courier_address"
+
+    #
+    # message = "Пожалуйста, введите адрес:"
+    # update.message.reply_text(
+    #     message,
+    #     reply_markup = ReplyKeyboardRemove()
+    # )
+    # return "order_courier_date"
 
 
 def order_courier_date(update, context):
     address = update.message.text
     context.user_data["address"] = address
 
-    message = "Пожалуйста, введите время доставки:"
+    message = "Пожалуйста, введите дату доставки в формате ДД-ММ, где ДД - число, " \
+                  "ММ - номер месяца:"
     update.message.reply_text(
         message,
         reply_markup = ReplyKeyboardRemove()
@@ -168,37 +209,80 @@ def order_courier_time(update, context):
     date = update.message.text
     context.user_data["date"] = date
 
-    message = "Пожалуйста, введите время доставки:"
-    update.message.reply_text(
-        message,
-        reply_markup = ReplyKeyboardRemove()
-    )
-    return "order_courier_message"
+    if is_proper_date_format(date):
+
+        message = "Пожалуйста, введите время доставки в формате ЧЧ:ММ:"
+        update.message.reply_text(
+            message,
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return "order_courier_message"
+
+    else:
+        message = "Извините, дата неправильная. " \
+                  "Нужны дата в формате ДД-ММ, где ДД - число, " \
+                  "ММ - номер месяца (включая ведущий 0):"
+
+        update.message.reply_text(
+            message,
+            reply_markup = ReplyKeyboardRemove(),
+        )
+
+        # return -1
+        return "order_courier_time"
+
+
 
 
 def order_courier_message(update, context):
     time = update.message.text
     context.user_data["time"] = time
 
-    message_to_courier = f"Новый заказ!\n" \
-                         f"Имя: {context.user_data['name']}\n" \
-                         f"Адрес: {context.user_data['address']}\n" \
-                         f"Время: {context.user_data['time']}\n" \
-                         f"Дата: {context.user_data['date']}\n"
 
-    updater = Updater(settings.TG_TOKEN)
-    updater.bot.sendMessage(chat_id=settings.COURIER_ID, text=message_to_courier)
+    if is_proper_time_format(time):
+
+        order = save_order(
+            {
+                'name': context.user_data["name"],
+                'address': context.user_data['address'],
+                'time': context.user_data['time'],
+                'date': context.user_data['date'],
+                'bouquet_name': context.user_data['bouqet'].name,
+            }
+        )
 
 
-    message = "Спасибо! Сообщаем курьеру!\nЕсли вы хотите заказать новый букет:"
+        message_to_courier = f"Новый заказ!\n" \
+                             f"Имя: {context.user_data['name']}\n" \
+                             f"Адрес: {context.user_data['address']}\n" \
+                             f"Время: {context.user_data['time']}\n" \
+                             f"Дата: {context.user_data['date']}\n"
 
-    update.message.reply_text(
-        message,
-        reply_markup=return_to_main_keyboard(),
-    )
+        updater = Updater(settings.TG_TOKEN)
+        updater.bot.sendMessage(chat_id=settings.COURIER_ID, text=message_to_courier)
 
-    # return -1
-    return "ask_occasion"
+        message = "Спасибо! Сообщаем курьеру!\nЕсли вы хотите заказать новый букет:"
+
+        update.message.reply_text(
+            message,
+            reply_markup=return_to_main_keyboard(),
+        )
+
+        # return -1
+        return "ask_occasion"
+
+    else:
+        message = "Извините, время неправильное. " \
+                  "Нужно время в формате ЧЧ:ММ:"
+
+        update.message.reply_text(
+            message,
+            reply_markup = ReplyKeyboardRemove(),
+        )
+
+        # return -1
+        return "order_courier_message"
+
 
 def ask_consultation(update, context):
     message = "Укажите номер телефона (В формате +7...), и наш флорист перезвонит вам в течение 20 минут"
